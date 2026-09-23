@@ -18,6 +18,23 @@ ShooterProject/
 └── docker-compose.yml
 ```
 
+### Frontend architecture
+
+```text
+frontend/src/
+├── app/                 # Composition of the application
+├── components/          # Reusable UI components
+│   └── leaderboard/
+├── config/              # API and domain configuration
+├── controllers/         # Hooks that coordinate UI state and use cases
+├── features/            # Feature-oriented screens and behavior
+│   └── reaction-test/
+├── services/            # HTTP and external integrations
+└── shared/              # Shared validation and utilities
+```
+
+There is no `routes/` folder yet because the frontend currently has one screen and no client-side navigation.
+
 ## Run the frontend
 
 ```bash

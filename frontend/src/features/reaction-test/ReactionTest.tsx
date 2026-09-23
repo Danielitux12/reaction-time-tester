@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./ReactionTest.css";
+import ProfileEditor from "../../components/profile/ProfileEditor";
+import { DIFFICULTY_LEVELS, difficultyConfig, type Difficulty } from "../../config/difficulty";
+import { saveScore } from "../../services/scoreService";
+import { validateProfileName } from "../../shared/profile";
 
 type GameState = "idle" | "waiting" | "target" | "tooSoon" | "result";
-type Difficulty = 1 | 2 | 3;
 
 type Target = {
   id: number;
@@ -18,17 +21,16 @@ type Target = {
 const TARGET_SIZE = 76;
 const MIN_DELAY = 900;
 const MAX_DELAY = 3600;
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
-
-const difficultyConfig: Record<Difficulty, { label: string; description: string }> = {
-  1: { label: "Fácil", description: "Objetivo estático" },
-  2: { label: "Medio", description: "Objetivos en movimiento" },
-  3: { label: "Difícil", description: "Movimiento + desaparición" },
-};
 
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
 
-export default function ReactionTest() {
+type ReactionTestProps = {
+  onScoreSaved?: () => void;
+  profileName: string;
+  onProfileNameChange: (value: string) => void;
+};
+
+export default function ReactionTest({ onScoreSaved, profileName, onProfileNameChange }: ReactionTestProps) {
   const [state, setState] = useState<GameState>("idle");
   const [lastTime, setLastTime] = useState<number | null>(null);
   const [bestTime, setBestTime] = useState<number | null>(null);
@@ -174,15 +176,12 @@ export default function ReactionTest() {
 
   const sendScoreToBackend = useCallback(async (time: number, difficultyValue: Difficulty, attemptNumber: number) => {
     try {
-      await fetch(`${API_URL}/api/scores`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ player: "guest", difficulty: difficultyValue, timeMs: time, attempts: attemptNumber }),
-      });
+      const saved = await saveScore({ player: profileName, difficulty: difficultyValue, timeMs: time, attempts: attemptNumber });
+      if (saved) onScoreSaved?.();
     } catch {
       // The tester remains usable when the API is offline.
     }
-  }, []);
+  }, [onScoreSaved, profileName]);
 
   const revealRound = useCallback(() => {
     const nextTargets = createTargets();
@@ -328,6 +327,9 @@ export default function ReactionTest() {
     if (stateRef.current !== "idle") reset();
   };
 
+  const profileError = validateProfileName(profileName);
+  const profileIsValid = profileError === null;
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && showMenu) {
@@ -338,7 +340,7 @@ export default function ReactionTest() {
         pauseGame();
         return;
       }
-      if (event.code === "Space" && stateRef.current === "idle") {
+      if (event.code === "Space" && profileIsValid && stateRef.current !== "waiting" && stateRef.current !== "target") {
         event.preventDefault();
         startRound();
       }
@@ -346,7 +348,7 @@ export default function ReactionTest() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pauseGame, resumeGame, showMenu, startRound]);
+  }, [pauseGame, profileIsValid, resumeGame, showMenu, startRound]);
 
   useEffect(() => () => {
     clearRevealTimeout();
@@ -376,6 +378,7 @@ export default function ReactionTest() {
           <span className="status-dot" />
           {statusText[state]}
         </div>
+        <ProfileEditor name={profileName} error={profileError} onChange={onProfileNameChange} />
       </header>
 
       <main className="dashboard">
@@ -387,7 +390,7 @@ export default function ReactionTest() {
             </div>
 
             <div className="difficulty-switch" role="group" aria-label="Seleccionar dificultad">
-              {(Object.keys(difficultyConfig) as unknown as Difficulty[]).map((level) => (
+              {DIFFICULTY_LEVELS.map((level) => (
                 <button
                   key={level}
                   className={difficulty === level ? "active" : ""}
@@ -460,7 +463,7 @@ export default function ReactionTest() {
           </div>
 
           <div className="game-actions">
-            <button className="primary-action" onClick={startRound} type="button" disabled={state === "waiting" || state === "target"}>
+            <button className="primary-action" onClick={startRound} type="button" disabled={!profileIsValid || state === "waiting" || state === "target"}>
               {state === "result" || state === "tooSoon" ? "Otra ronda" : "Iniciar prueba"}
               <kbd>SPACE</kbd>
             </button>
@@ -504,8 +507,6 @@ export default function ReactionTest() {
 
       <footer className="app-footer">
         <span>Entrenamiento de reacción</span>
-        <span>·</span>
-        <span>Los tiempos se miden con performance.now()</span>
       </footer>
 
       {showMenu && (
