@@ -3,24 +3,20 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy solution and project files first for efficient layer caching
-COPY ShooterBackend.sln ./
-COPY Domain/ShooterBackend.Domain.csproj Domain/
-COPY Application/ShooterBackend.Application.csproj Application/
-COPY Infrastructure/ShooterBackend.Infrastructure.csproj Infrastructure/
-COPY Api/ShooterBackend.Api.csproj Api/
-COPY Web/ShooterBackend.Web.csproj Web/
+COPY RTM.sln ./
+COPY src/RTM.Domain/RTM.Domain.csproj src/RTM.Domain/
+COPY src/RTM.Application/RTM.Application.csproj src/RTM.Application/
+COPY src/RTM.Infrastructure/RTM.Infrastructure.csproj src/RTM.Infrastructure/
+COPY src/RTM.Api/RTM.Api.csproj src/RTM.Api/
+COPY src/RTM.Web/RTM.Web.csproj src/RTM.Web/
 
-RUN dotnet restore ShooterBackend.sln
+RUN dotnet restore RTM.sln
 
 # Copy all source files
-COPY Domain/ Domain/
-COPY Application/ Application/
-COPY Infrastructure/ Infrastructure/
-COPY Api/ Api/
-COPY Web/ Web/
+COPY src/ src/
 
 # Publish Web host project
-RUN dotnet publish Web/ShooterBackend.Web.csproj -c Release -o /app/publish
+RUN dotnet publish src/RTM.Web/RTM.Web.csproj -c Release -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -30,4 +26,4 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
-ENTRYPOINT ["dotnet", "ShooterBackend.Web.dll"]
+ENTRYPOINT ["dotnet", "RTM.Web.dll"]

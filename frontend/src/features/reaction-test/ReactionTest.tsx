@@ -3,7 +3,6 @@ import "./ReactionTest.css";
 import ProfileEditor from "../../components/profile/ProfileEditor";
 import { DIFFICULTY_LEVELS, difficultyConfig, type Difficulty } from "../../config/difficulty";
 import { saveScore } from "../../services/scoreService";
-import { validateProfileName } from "../../shared/profile";
 
 type GameState = "idle" | "waiting" | "target" | "tooSoon" | "result";
 
@@ -24,13 +23,26 @@ const MAX_DELAY = 3600;
 
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
 
+const getPlayAreaBounds = (play: HTMLDivElement) => {
+  const { width, height } = play.getBoundingClientRect();
+  const half = TARGET_SIZE / 2;
+  return {
+    half,
+    minX: half,
+    minY: half,
+    maxX: Math.max(half, width - half),
+    maxY: Math.max(half, height - half),
+  };
+};
+
 type ReactionTestProps = {
   onScoreSaved?: () => void;
   profileName: string;
+  profileError: string | null;
   onProfileNameChange: (value: string) => void;
 };
 
-export default function ReactionTest({ onScoreSaved, profileName, onProfileNameChange }: ReactionTestProps) {
+export default function ReactionTest({ onScoreSaved, profileName, profileError, onProfileNameChange }: ReactionTestProps) {
   const [state, setState] = useState<GameState>("idle");
   const [lastTime, setLastTime] = useState<number | null>(null);
   const [bestTime, setBestTime] = useState<number | null>(null);
@@ -81,12 +93,7 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
     const difficultyValue = difficultyRef.current;
     if (!play) return [];
 
-    const { width, height } = play.getBoundingClientRect();
-    const half = TARGET_SIZE / 2;
-    const minX = half;
-    const minY = half;
-    const maxX = Math.max(half, width - half);
-    const maxY = Math.max(half, height - half);
+    const { minX, minY, maxX, maxY } = getPlayAreaBounds(play);
     const count = difficultyValue === 1 ? 1 : 3;
 
     return Array.from({ length: count }, (_, index): Target => {
@@ -121,12 +128,7 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
 
       const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
       lastTimestamp = timestamp;
-      const { width, height } = play.getBoundingClientRect();
-      const half = TARGET_SIZE / 2;
-      const minX = half;
-      const minY = half;
-      const maxX = Math.max(half, width - half);
-      const maxY = Math.max(half, height - half);
+      const { minX, minY, maxX, maxY } = getPlayAreaBounds(play);
       const difficultyValue = difficultyRef.current;
 
       const nextTargets = targetsRef.current.map((target) => {
@@ -277,7 +279,7 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
   const handlePlayAreaClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const currentState = stateRef.current;
 
-    if (currentState === "waiting") {
+    const triggerPrematureFailure = () => {
       clearRevealTimeout();
       stopAnimation();
       setAttempts((value) => value + 1);
@@ -286,6 +288,10 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
       setTargets([]);
       setGameState("tooSoon");
       queueRetry();
+    };
+
+    if (currentState === "waiting") {
+      triggerPrematureFailure();
       return;
     }
 
@@ -302,12 +308,7 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
     });
 
     if (!hit) {
-      stopAnimation();
-      targetsRef.current = [];
-      setTargets([]);
-      setAttempts((value) => value + 1);
-      setGameState("tooSoon");
-      queueRetry();
+      triggerPrematureFailure();
       return;
     }
 
@@ -327,7 +328,6 @@ export default function ReactionTest({ onScoreSaved, profileName, onProfileNameC
     if (stateRef.current !== "idle") reset();
   };
 
-  const profileError = validateProfileName(profileName);
   const profileIsValid = profileError === null;
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-# ShooterBackend (.NET 8 Clean Architecture)
+# RTM Backend (.NET 8 Clean Architecture)
 
 Lightweight ASP.NET Core backend storing scores in PostgreSQL using Entity Framework Core, structured according to Clean Architecture principles.
 
@@ -8,34 +8,35 @@ The project is split into 5 distinct layers:
 
 ```text
 backend/
-├── Domain/           # Enterprise domain entities and repository contracts (pure C#, no dependencies)
-├── Application/      # Use cases, DTOs, service interfaces, validation, and domain orchestration
-├── Infrastructure/   # PostgreSQL AppDbContext, EF Core entity mappings, and repository implementations
-├── Api/              # ASP.NET Core API controllers, routing, and HTTP contracts
-├── Web/              # Web application entry point (Program.cs), middleware, Swagger, CORS, and hosting
-└── ShooterBackend.sln
+├── src/
+│   ├── RTM.Domain/           # Enterprise domain entities and repository contracts (pure C#, no dependencies)
+│   ├── RTM.Application/      # Use cases, DTOs, service interfaces, validation, and domain orchestration
+│   ├── RTM.Infrastructure/   # PostgreSQL AppDbContext, EF Core entity mappings, and repository implementations
+│   ├── RTM.Api/              # ASP.NET Core API controllers, routing, and HTTP contracts
+│   └── RTM.Web/              # Web application entry point (Program.cs), middleware, Swagger, CORS, and hosting
+└── RTM.sln
 ```
 
 ### Layer Responsibilities
 
-1. **Domain (`ShooterBackend.Domain`)**:
+1. **Domain (`RTM.Domain`)**:
    - Contains core entities (`Score`) and repository contracts (`IScoreRepository`).
    - Zero external framework dependencies.
 
-2. **Application (`ShooterBackend.Application`)**:
+2. **Application (`RTM.Application`)**:
    - Defines DTOs (`ScoreRequest`, `ScoreResponse`), application interfaces (`IScoreService`), and business logic orchestration (`ScoreService`).
    - Handles input normalization (e.g. trimming and default player names) and limit clamping.
 
-3. **Infrastructure (`ShooterBackend.Infrastructure`)**:
+3. **Infrastructure (`RTM.Infrastructure`)**:
    - EF Core `AppDbContext` and entity configurations (`ScoreConfiguration`).
    - Implementation of `IScoreRepository` (`ScoreRepository`).
    - Database initialization with resilient retry policy (`DatabaseInitializer`).
 
-4. **Api (`ShooterBackend.Api`)**:
+4. **Api (`RTM.Api`)**:
    - REST API Controllers (`ScoresController`).
    - Maps HTTP requests, response status codes, and delegates directly to `IScoreService`.
 
-5. **Web (`ShooterBackend.Web`)**:
+5. **Web (`RTM.Web`)**:
    - Composition root and executable entry point (`Program.cs`).
    - Dependency Injection composition (`AddApplication`, `AddInfrastructure`, `AddApi`).
    - Swagger / OpenAPI documentation UI at `/swagger`.
@@ -45,13 +46,13 @@ backend/
 ## Run Locally
 
 1. Ensure you have the .NET 8 SDK and PostgreSQL running.
-2. Update `Web/appsettings.json` or set the environment variable `CONNECTION_STRING`.
+2. Update `src/RTM.Web/appsettings.json` or set the environment variable `CONNECTION_STRING`.
 3. Restore and run:
 
 ```bash
 cd backend
-dotnet restore ShooterBackend.sln
-dotnet run --project Web/ShooterBackend.Web.csproj
+dotnet restore RTM.sln
+dotnet run --project src/RTM.Web/RTM.Web.csproj
 ```
 
 Swagger UI will be accessible at: `http://localhost:5000/swagger` (or the configured port).

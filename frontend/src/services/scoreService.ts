@@ -9,11 +9,8 @@ export type ScoreEntry = {
   createdAt: string;
 };
 
-export type SaveScorePayload = {
+export type SaveScorePayload = Omit<ScoreEntry, "id" | "createdAt"> & {
   player: string;
-  difficulty: number;
-  timeMs: number;
-  attempts: number;
 };
 
 const scoresUrl = (limit?: number) => `${API_URL}/api/scores${limit ? `?limit=${limit}` : ""}`;

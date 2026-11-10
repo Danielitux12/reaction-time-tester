@@ -5,7 +5,7 @@ import { useProfileController } from "../controllers/useProfileController";
 
 function App() {
   const [refreshSignal, setRefreshSignal] = useState(0);
-  const { profileName, updateProfileName } = useProfileController();
+  const { profileName, profileError, updateProfileName } = useProfileController();
 
   const handleScoreSaved = useCallback(() => {
     setRefreshSignal((value) => value + 1);
@@ -16,6 +16,7 @@ function App() {
       <ReactionTest
         onScoreSaved={handleScoreSaved}
         profileName={profileName}
+        profileError={profileError}
         onProfileNameChange={updateProfileName}
       />
       <Leaderboard refreshSignal={refreshSignal} />

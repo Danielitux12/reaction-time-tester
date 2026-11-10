@@ -1,79 +1,149 @@
-# Reaction Shooter
+# Reaction Shooter (RTM)
 
-Reaction-time trainer for FPS players, built with React + TypeScript on the frontend and ASP.NET Core + PostgreSQL on the backend.
+Reaction-time trainer for FPS players, built with **React + TypeScript** on the frontend and **ASP.NET Core 8 (Clean Architecture) + PostgreSQL** on the backend.
 
-## Stack
+---
 
-- Frontend: React, TypeScript, Vite
-- Backend: ASP.NET Core 8
-- Data: PostgreSQL + Entity Framework Core
-- Local infrastructure: Docker Compose
+## Tech Stack
 
-## Project structure
+* **Frontend:** React 19, TypeScript, Vite, Modern CSS
+* **Backend:** .NET 8 (ASP.NET Core Web API), Entity Framework Core
+* **Database:** PostgreSQL 15
+* **Architecture:** Clean Architecture (Domain, Application, Infrastructure, Api, Web)
+* **DevOps / Orchestration:** Docker & Docker Compose
+
+---
+
+## Project Structure
 
 ```text
-ShooterProject/
-├── frontend/     # React application
-├── backend/      # ASP.NET Core 8 Clean Architecture (Domain, Application, Infrastructure, Api, Web)
-└── docker-compose.yml
+reaction-time-tester/
+├── frontend/                 # Client SPA (React + TypeScript + Vite)
+├── backend/                  # .NET 8 Clean Architecture solution
+│   ├── src/
+│   │   ├── RTM.Domain/           # Pure domain entities and repository interfaces
+│   │   ├── RTM.Application/      # Use cases, DTOs, and application services
+│   │   ├── RTM.Infrastructure/   # PostgreSQL EF Core DbContext and repositories
+│   │   ├── RTM.Api/              # REST API controllers and HTTP routing
+│   │   └── RTM.Web/              # ASP.NET Core host (Program.cs, Swagger, CORS)
+│   ├── Dockerfile            # Multi-stage production build for backend
+│   └── RTM.sln               # Solution file
+├── docker-compose.yml        # Orchestration for PostgreSQL and Backend API
+└── README.md
 ```
 
-### Backend architecture (Clean Architecture)
+### Backend Architecture (Clean Architecture)
 
 ```text
 backend/
-├── Domain/           # Enterprise domain entities and repository interfaces
-├── Application/      # Business use cases, DTOs, and application services
-├── Infrastructure/   # PostgreSQL EF Core DbContext, entity configurations, repositories
-├── Api/              # REST API controllers and HTTP presentation
-└── Web/              # ASP.NET Core Web Host, Program.cs, middleware, Swagger & health checks
+├── src/
+│   ├── RTM.Domain/           # Enterprise domain entities and repository interfaces (Zero dependencies)
+│   ├── RTM.Application/      # Business use cases, DTOs, and application services
+│   ├── RTM.Infrastructure/   # PostgreSQL EF Core DbContext, entity configurations, repositories
+│   ├── RTM.Api/              # REST API controllers and HTTP presentation
+│   └── RTM.Web/              # ASP.NET Core Web Host, Program.cs, middleware, Swagger & health checks
+└── RTM.sln
 ```
 
-### Frontend architecture
+### Frontend Architecture
 
 ```text
 frontend/src/
-├── app/                 # Composition of the application
-├── components/          # Reusable UI components
-│   └── leaderboard/
-├── config/              # API and domain configuration
-├── controllers/         # Hooks that coordinate UI state and use cases
-├── features/            # Feature-oriented screens and behavior
-│   └── reaction-test/
-├── services/            # HTTP and external integrations
-└── shared/              # Shared validation and utilities
+├── app/                      # Application root composition
+├── components/               # Reusable UI components (profile, leaderboard)
+├── config/                   # API URLs and difficulty configurations
+├── controllers/              # Custom hooks coordinating UI state with use cases
+├── features/                 # Feature-specific game logic (reaction-test)
+├── services/                 # HTTP API integrations (scores)
+└── shared/                   # Shared validation and storage utilities
 ```
 
-There is no `routes/` folder yet because the frontend currently has one screen and no client-side navigation.
+---
 
-## Run the frontend
+## Running Locally
 
-```bash
-cd frontend
-npm install
-npm run dev
+You can run the application using **Docker Compose (Recommended)** or **Natively (Without Docker)**.
+
+### Option 1: Using Docker Compose (Recommended) 🐳
+
+This method starts both **PostgreSQL** and the **.NET 8 Backend** automatically.
+
+1. **Start Database and Backend:**
+   ```bash
+   docker compose up --build
+   ```
+   * **API URL:** `http://localhost:5000`
+   * **Swagger UI:** `http://localhost:5000/swagger`
+   * **Health Check:** `http://localhost:5000/health`
+
+2. **Start Frontend (in a separate terminal):**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   * **Web App URL:** `http://localhost:5173`
+
+---
+
+### Option 2: Running Natively (Without Docker) 💻
+
+#### Prerequisites:
+* [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+* [Node.js](https://nodejs.org/) (v18+) & npm
+* [PostgreSQL](https://www.postgresql.org/) running locally (default port: `5432`)
+
+1. **Configure Connection String:**
+   Ensure `backend/src/RTM.Web/appsettings.json` points to your local PostgreSQL instance:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Host=localhost;Port=5432;Database=shooter;Username=postgres;Password=postgres"
+   }
+   ```
+   *(Alternatively, export the environment variable `export CONNECTION_STRING="Host=localhost;..."`).*
+
+2. **Run Backend:**
+   ```bash
+   cd backend
+   dotnet restore RTM.sln
+   dotnet run --project src/RTM.Web/RTM.Web.csproj
+   ```
+
+3. **Run Frontend:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+---
+
+## Environment Variables
+
+### Frontend (`frontend/.env`)
+
+Copy `frontend/.env.example` to `frontend/.env` if you need to point to a custom API host:
+```env
+VITE_API_URL=http://localhost:5000
 ```
 
-The frontend expects the API at `http://localhost:5000` by default. Copy `frontend/.env.example` to `frontend/.env` if you need to change it.
+### Backend (`backend/src/RTM.Web/appsettings.json` or Environment)
 
-## Run backend + PostgreSQL
+* `CONNECTION_STRING`: PostgreSQL connection string (overrides `DefaultConnection`).
+* `AllowedOrigins`: Array of frontend origins allowed by CORS policies (defaults to `["http://localhost:5173", "http://127.0.0.1:5173"]`).
 
-From the repository root:
+---
 
-```bash
-docker compose up --build
-```
+## API Endpoints
 
-API: `http://localhost:5000`
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/scores?limit=10` | Top reaction times (ordered by lowest `timeMs`) |
+| `GET` | `/api/scores/{id}` | Get score details by identifier |
+| `POST` | `/api/scores` | Record a new score |
+| `GET` | `/health` | Service health check |
 
-## API
-
-- `GET /api/scores?limit=10` — top reaction times.
-- `GET /api/scores/{id}` — retrieve one score.
-- `POST /api/scores` — save a score.
-
-Example request:
-
+### Sample POST Request Payload:
 ```json
 {
   "player": "guest",
@@ -83,9 +153,13 @@ Example request:
 }
 ```
 
-## Frontend checks
+---
 
+## Quality Checks & Testing
+
+### Frontend
 ```bash
-npm run lint
-npm run build
+cd frontend
+npm run lint    # Run oxlint checks
+npm run build   # Run TypeScript typecheck (tsc -b) & Vite bundle
 ```
