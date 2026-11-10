@@ -1,0 +1,131 @@
+.hud-crosshair-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.05s ease-out;
+}
+
+.hud-crosshair-container.is-recoiling {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+
+.crosshair-body {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Lines for cross style */
+.ch-line {
+  position: absolute;
+  border-radius: 1px;
+}
+
+.ch-top {
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 9px;
+  transform: translateX(-50%);
+}
+
+.ch-bottom {
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  height: 9px;
+  transform: translateX(-50%);
+}
+
+.ch-left {
+  left: 0;
+  top: 50%;
+  width: 9px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.ch-right {
+  right: 0;
+  top: 50%;
+  width: 9px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.ch-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Dot style */
+.ch-single-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* Circle style */
+.ch-ring {
+  width: 22px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 50%;
+  opacity: 0.85;
+}
+
+/* Hit marker 'X' flash */
+.hit-marker {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  animation: hitMarkerFlash 0.16s ease-out forwards;
+}
+
+.hit-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  background-color: #ff2a5f;
+  box-shadow: 0 0 6px #ff2a5f;
+}
+
+.hit-line.diag-1 {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.hit-line.diag-2 {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+@keyframes hitMarkerFlash {
+  0% {
+    transform: scale(0.7);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

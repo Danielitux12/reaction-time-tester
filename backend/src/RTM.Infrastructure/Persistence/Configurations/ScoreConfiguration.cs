@@ -16,6 +16,10 @@ public class ScoreConfiguration : IEntityTypeConfiguration<Score>
             .HasMaxLength(40)
             .IsRequired(false);
 
+        builder.Property(s => s.UserId)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         builder.Property(s => s.Difficulty)
             .IsRequired();
 

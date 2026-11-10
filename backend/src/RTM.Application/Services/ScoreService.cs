@@ -14,10 +14,10 @@ public class ScoreService : IScoreService
         _scoreRepository = scoreRepository;
     }
 
-    public async Task<IReadOnlyList<ScoreResponse>> GetTopScoresAsync(int limit = 10, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ScoreResponse>> GetTopScoresAsync(int limit = 100, int? difficulty = null, CancellationToken cancellationToken = default)
     {
         var clampedLimit = Math.Clamp(limit, 1, 100);
-        var scores = await _scoreRepository.GetTopScoresAsync(clampedLimit, cancellationToken);
+        var scores = await _scoreRepository.GetTopScoresAsync(clampedLimit, difficulty, cancellationToken);
         return scores.Select(MapToResponse).ToList();
     }
 
@@ -27,13 +27,22 @@ public class ScoreService : IScoreService
         return score is null ? null : MapToResponse(score);
     }
 
-    public async Task<ScoreResponse> CreateScoreAsync(ScoreRequest request, CancellationToken cancellationToken = default)
+    public async Task<ScoreResponse> CreateScoreAsync(
+        ScoreRequest request,
+        string? player = null,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
     {
+        var finalPlayer = !string.IsNullOrWhiteSpace(player)
+            ? player.Trim()
+            : (!string.IsNullOrWhiteSpace(request.Player) ? request.Player.Trim() : "guest");
+
         var score = new Score(
-            player: request.Player,
+            player: finalPlayer,
             difficulty: request.Difficulty,
             timeMs: request.TimeMs,
-            attempts: request.Attempts
+            attempts: request.Attempts,
+            userId: userId
         );
 
         var savedScore = await _scoreRepository.AddAsync(score, cancellationToken);

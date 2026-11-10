@@ -50,12 +50,11 @@ backend/
 ```text
 frontend/src/
 ├── app/                      # Application root composition
-├── components/               # Reusable UI components (profile, leaderboard)
+├── components/               # Reusable UI components (auth, leaderboard)
 ├── config/                   # API URLs and difficulty configurations
 ├── controllers/              # Custom hooks coordinating UI state with use cases
 ├── features/                 # Feature-specific game logic (reaction-test)
-├── services/                 # HTTP API integrations (scores)
-└── shared/                   # Shared validation and storage utilities
+└── services/                 # HTTP API integrations (auth, scores)
 ```
 
 ---

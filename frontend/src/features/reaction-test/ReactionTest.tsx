@@ -1,77 +1,75 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./ReactionTest.css";
-import ProfileEditor from "../../components/profile/ProfileEditor";
 import { DIFFICULTY_LEVELS, difficultyConfig, type Difficulty } from "../../config/difficulty";
 import { saveScore } from "../../services/scoreService";
+import { DEFAULT_SETTINGS, type GameState, type ShooterSettings } from "./types";
+import ShooterArena from "./ShooterArena";
+import Crosshair from "./Crosshair";
+import EscMenu from "./EscMenu";
+import AuthModal from "../../components/auth/AuthModal";
+import { useAuthController } from "../../controllers/useAuthController";
+import { soundManager } from "./soundEffects";
 
-type GameState = "idle" | "waiting" | "target" | "tooSoon" | "result";
-
-type Target = {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  visible: boolean;
-  blink: number;
-  speedMul: number;
-};
-
-const TARGET_SIZE = 76;
-const MIN_DELAY = 900;
-const MAX_DELAY = 3600;
+const MIN_DELAY = 1000;
+const MAX_DELAY = 3200;
 
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
 
-const getPlayAreaBounds = (play: HTMLDivElement) => {
-  const { width, height } = play.getBoundingClientRect();
-  const half = TARGET_SIZE / 2;
-  return {
-    half,
-    minX: half,
-    minY: half,
-    maxX: Math.max(half, width - half),
-    maxY: Math.max(half, height - half),
-  };
-};
+export default function ReactionTest() {
+  // Auth controller
+  const auth = useAuthController();
 
-type ReactionTestProps = {
-  onScoreSaved?: () => void;
-  profileName: string;
-  profileError: string | null;
-  onProfileNameChange: (value: string) => void;
-};
-
-export default function ReactionTest({ onScoreSaved, profileName, profileError, onProfileNameChange }: ReactionTestProps) {
+  // Game state
   const [state, setState] = useState<GameState>("idle");
   const [lastTime, setLastTime] = useState<number | null>(null);
   const [bestTime, setBestTime] = useState<number | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [difficulty, setDifficulty] = useState<Difficulty>(1);
-  const [targets, setTargets] = useState<Target[]>([]);
-  const [showMenu, setShowMenu] = useState(false);
+  const [showEscMenu, setShowEscMenu] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isPointerLocked, setIsPointerLocked] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const playRef = useRef<HTMLDivElement | null>(null);
-  const targetsRef = useRef<Target[]>([]);
+  // Settings
+  const [settings, setSettings] = useState<ShooterSettings>(() => {
+    try {
+      const saved = localStorage.getItem("rtm_shooter_settings");
+      if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    } catch {
+      // fallback
+    }
+    return DEFAULT_SETTINGS;
+  });
+
+  // Crosshair feedback
+  const [recoilActive, setRecoilActive] = useState(false);
+  const [hitMarkerActive, setHitMarkerActive] = useState(false);
+
+  // Refs
   const stateRef = useRef<GameState>("idle");
   const difficultyRef = useRef<Difficulty>(1);
   const startTimeRef = useRef<number | null>(null);
   const revealTimeoutRef = useRef<number | null>(null);
   const revealDeadlineRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const autoResetRef = useRef<number | null>(null);
   const pausedRemainingRef = useRef<number | null>(null);
+  const autoRetryTimeoutRef = useRef<number | null>(null);
+  const recoilTimerRef = useRef<number | null>(null);
+  const hitMarkerTimerRef = useRef<number | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+
+  // Update setting and persist to localStorage
+  const handleSettingsChange = (newSettings: ShooterSettings) => {
+    setSettings(newSettings);
+    try {
+      localStorage.setItem("rtm_shooter_settings", JSON.stringify(newSettings));
+    } catch {
+      // ignore
+    }
+  };
 
   const setGameState = useCallback((next: GameState) => {
     stateRef.current = next;
     setState(next);
-  }, []);
-
-  const stopAnimation = useCallback(() => {
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
   }, []);
 
   const clearRevealTimeout = useCallback(() => {
@@ -81,164 +79,76 @@ export default function ReactionTest({ onScoreSaved, profileName, profileError, 
     }
   }, []);
 
-  const clearAutoReset = useCallback(() => {
-    if (autoResetRef.current !== null) {
-      window.clearTimeout(autoResetRef.current);
-      autoResetRef.current = null;
+  const clearAutoRetry = useCallback(() => {
+    if (autoRetryTimeoutRef.current !== null) {
+      window.clearTimeout(autoRetryTimeoutRef.current);
+      autoRetryTimeoutRef.current = null;
     }
   }, []);
 
-  const createTargets = useCallback(() => {
-    const play = playRef.current;
-    const difficultyValue = difficultyRef.current;
-    if (!play) return [];
-
-    const { minX, minY, maxX, maxY } = getPlayAreaBounds(play);
-    const count = difficultyValue === 1 ? 1 : 3;
-
-    return Array.from({ length: count }, (_, index): Target => {
-      const speed = difficultyValue === 1 ? 0 : randomBetween(110, 220);
-      let angle = randomBetween(0, Math.PI * 2);
-
-      if (difficultyValue === 2) {
-        // Medium moves diagonally toward the lower-left.
-        angle = randomBetween((Math.PI * 0.55), (Math.PI * 0.95));
-      }
-
-      return {
-        id: index + 1,
-        x: randomBetween(minX, maxX),
-        y: randomBetween(minY, maxY),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        visible: true,
-        blink: difficultyValue === 3 ? randomBetween(0.25, 0.8) : Number.POSITIVE_INFINITY,
-        speedMul: 1,
-      };
-    });
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      const el = shellRef.current || document.documentElement;
+      el.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   }, []);
 
-  const startAnimation = useCallback(() => {
-    stopAnimation();
-    let lastTimestamp = performance.now();
-
-    const frame = (timestamp: number) => {
-      const play = playRef.current;
-      if (!play || stateRef.current !== "target") return;
-
-      const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
-      lastTimestamp = timestamp;
-      const { minX, minY, maxX, maxY } = getPlayAreaBounds(play);
-      const difficultyValue = difficultyRef.current;
-
-      const nextTargets = targetsRef.current.map((target) => {
-        let { x, y, vx, vy, visible, blink, speedMul } = target;
-
-        if (difficultyValue === 3) {
-          blink -= dt;
-          if (blink <= 0) {
-            visible = !visible;
-            blink = randomBetween(0.3, 0.85);
-          }
-          speedMul = Math.min(2.5, speedMul + dt * 0.18);
-        } else {
-          visible = true;
-          blink = Number.POSITIVE_INFINITY;
-        }
-
-        x += vx * speedMul * dt;
-        y += vy * speedMul * dt;
-
-        if (difficultyValue === 2) {
-          if (x < minX || y > maxY) {
-            x = maxX - randomBetween(0, Math.min(100, Math.max(0, maxX - minX)));
-            y = minY + randomBetween(0, Math.min(100, Math.max(0, maxY - minY)));
-          }
-        } else {
-          if (x <= minX || x >= maxX) {
-            x = Math.max(minX, Math.min(maxX, x));
-            vx *= -1;
-          }
-          if (y <= minY || y >= maxY) {
-            y = Math.max(minY, Math.min(maxY, y));
-            vy *= -1;
-          }
-        }
-
-        return { ...target, x, y, vx, vy, visible, blink, speedMul };
-      });
-
-      targetsRef.current = nextTargets;
-      setTargets(nextTargets);
-      animationFrameRef.current = requestAnimationFrame(frame);
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
     };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
 
-    animationFrameRef.current = requestAnimationFrame(frame);
-  }, [stopAnimation]);
-
-  const sendScoreToBackend = useCallback(async (time: number, difficultyValue: Difficulty, attemptNumber: number) => {
-    try {
-      const saved = await saveScore({ player: profileName, difficulty: difficultyValue, timeMs: time, attempts: attemptNumber });
-      if (saved) onScoreSaved?.();
-    } catch {
-      // The tester remains usable when the API is offline.
+  // Request pointer lock
+  const lockPointer = useCallback(() => {
+    const playArea = document.querySelector(".arena-container") as HTMLElement | null;
+    if (playArea && !document.pointerLockElement) {
+      try {
+        playArea.requestPointerLock();
+      } catch {
+        // ignore
+      }
     }
-  }, [onScoreSaved, profileName]);
+  }, []);
 
+  // Target reveal handler
   const revealRound = useCallback(() => {
-    const nextTargets = createTargets();
-    targetsRef.current = nextTargets;
-    setTargets(nextTargets);
     startTimeRef.current = performance.now();
     setGameState("target");
     revealTimeoutRef.current = null;
     revealDeadlineRef.current = null;
     pausedRemainingRef.current = null;
-    startAnimation();
-  }, [createTargets, setGameState, startAnimation]);
+  }, [setGameState]);
 
+  // Start round
   const startRound = useCallback(() => {
+    if (!auth.isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
     clearRevealTimeout();
-    clearAutoReset();
-    stopAnimation();
-    targetsRef.current = [];
-    setTargets([]);
+    clearAutoRetry();
     startTimeRef.current = null;
     pausedRemainingRef.current = null;
+    setShowEscMenu(false);
     setGameState("waiting");
+
+    soundManager.playReadySound();
+    lockPointer();
 
     const delay = Math.round(randomBetween(MIN_DELAY, MAX_DELAY));
     revealDeadlineRef.current = performance.now() + delay;
     revealTimeoutRef.current = window.setTimeout(revealRound, delay);
-  }, [clearAutoReset, clearRevealTimeout, revealRound, setGameState, stopAnimation]);
+  }, [auth.isAuthenticated, clearAutoRetry, clearRevealTimeout, lockPointer, revealRound, setGameState]);
 
-  const reset = useCallback(() => {
-    clearRevealTimeout();
-    clearAutoReset();
-    stopAnimation();
-    targetsRef.current = [];
-    setTargets([]);
-    startTimeRef.current = null;
-    pausedRemainingRef.current = null;
-    revealDeadlineRef.current = null;
-    setLastTime(null);
-    setBestTime(null);
-    setAttempts(0);
-    setShowMenu(false);
-    setGameState("idle");
-  }, [clearAutoReset, clearRevealTimeout, setGameState, stopAnimation]);
-
-  const queueRetry = useCallback(() => {
-    clearAutoReset();
-    autoResetRef.current = window.setTimeout(() => {
-      autoResetRef.current = null;
-      startRound();
-    }, 1100);
-  }, [clearAutoReset, startRound]);
-
+  // Pause game and open ESC Menu
   const pauseGame = useCallback(() => {
-    if (stateRef.current !== "waiting" && stateRef.current !== "target") return;
-
     if (stateRef.current === "waiting" && revealTimeoutRef.current !== null) {
       pausedRemainingRef.current = revealDeadlineRef.current === null
         ? 1000
@@ -247,281 +157,384 @@ export default function ReactionTest({ onScoreSaved, profileName, profileError, 
       revealDeadlineRef.current = null;
     }
 
-    stopAnimation();
-    setShowMenu(true);
-  }, [clearRevealTimeout, stopAnimation]);
+    setShowEscMenu(true);
+  }, [clearRevealTimeout]);
 
+  // Resume game from ESC Menu
   const resumeGame = useCallback(() => {
-    setShowMenu(false);
+    setShowEscMenu(false);
+    lockPointer();
+
     if (stateRef.current === "waiting") {
       const remaining = pausedRemainingRef.current ?? 1000;
       revealDeadlineRef.current = performance.now() + remaining;
       revealTimeoutRef.current = window.setTimeout(revealRound, remaining);
-      return;
     }
-    if (stateRef.current === "target") startAnimation();
-  }, [revealRound, startAnimation]);
+  }, [lockPointer, revealRound]);
 
-  const finishRound = useCallback((time: number) => {
-    const roundedTime = Math.max(1, Math.round(time));
-    const nextAttempts = attempts + 1;
-    setLastTime(roundedTime);
-    setBestTime((current) => current === null || roundedTime < current ? roundedTime : current);
-    setAttempts(nextAttempts);
-    targetsRef.current = [];
-    setTargets([]);
+  // Reset
+  const resetGame = useCallback(() => {
+    clearRevealTimeout();
+    clearAutoRetry();
     startTimeRef.current = null;
-    stopAnimation();
-    setGameState("result");
-    void sendScoreToBackend(roundedTime, difficultyRef.current, nextAttempts);
-  }, [attempts, sendScoreToBackend, setGameState, stopAnimation]);
+    pausedRemainingRef.current = null;
+    revealDeadlineRef.current = null;
+    setLastTime(null);
+    setBestTime(null);
+    setAttempts(0);
+    setShowEscMenu(false);
+    setGameState("idle");
+  }, [clearAutoRetry, clearRevealTimeout, setGameState]);
 
-  const handlePlayAreaClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const currentState = stateRef.current;
+  // Premature shot penalty
+  const handlePrematureShot = useCallback(() => {
+    clearRevealTimeout();
+    setAttempts((val) => val + 1);
+    setLastTime(null);
+    setGameState("tooSoon");
 
-    const triggerPrematureFailure = () => {
-      clearRevealTimeout();
-      stopAnimation();
-      setAttempts((value) => value + 1);
-      setLastTime(null);
-      targetsRef.current = [];
-      setTargets([]);
-      setGameState("tooSoon");
-      queueRetry();
-    };
+    clearAutoRetry();
+    autoRetryTimeoutRef.current = window.setTimeout(() => {
+      autoRetryTimeoutRef.current = null;
+      startRound();
+    }, 1200);
+  }, [clearAutoRetry, clearRevealTimeout, setGameState, startRound]);
 
-    if (currentState === "waiting") {
-      triggerPrematureFailure();
-      return;
+  // Recoil visual trigger
+  const handleRecoilTriggered = useCallback(() => {
+    setRecoilActive(true);
+    if (recoilTimerRef.current !== null) clearTimeout(recoilTimerRef.current);
+    recoilTimerRef.current = window.setTimeout(() => {
+      setRecoilActive(false);
+    }, 80);
+  }, []);
+
+  // Hit target
+  const handleTargetHit = useCallback((_targetId: number, remainingTargets: number) => {
+    setHitMarkerActive(true);
+    if (hitMarkerTimerRef.current !== null) clearTimeout(hitMarkerTimerRef.current);
+    hitMarkerTimerRef.current = window.setTimeout(() => {
+      setHitMarkerActive(false);
+    }, 160);
+
+    // If all targets destroyed in this round, round complete!
+    if (remainingTargets === 0 && startTimeRef.current !== null) {
+      const elapsed = performance.now() - startTimeRef.current;
+      const rounded = Math.max(1, Math.round(elapsed));
+      const nextAttempts = attempts + 1;
+
+      setLastTime(rounded);
+      setBestTime((cur) => (cur === null || rounded < cur ? rounded : cur));
+      setAttempts(nextAttempts);
+      setGameState("result");
+
+      // Save score to backend with identity
+      if (auth.isAuthenticated) {
+        saveScore({
+          difficulty: difficultyRef.current,
+          timeMs: rounded,
+          attempts: nextAttempts,
+        }).catch(() => {
+          // offline support
+        });
+      }
     }
+  }, [attempts, auth.isAuthenticated, setGameState]);
 
-    if (currentState !== "target" || startTimeRef.current === null) return;
+  // Pointer lock change callback
+  const handlePointerLockChange = useCallback((locked: boolean) => {
+    setIsPointerLocked(locked);
 
-    const play = playRef.current;
-    if (!play) return;
-    const rect = play.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
-    const hit = targetsRef.current.find((target) => {
-      if (!target.visible) return false;
-      return Math.hypot(clickX - target.x, clickY - target.y) <= TARGET_SIZE / 2;
-    });
-
-    if (!hit) {
-      triggerPrematureFailure();
-      return;
+    // If pointer lock was lost while playing, auto-pause with ESC menu!
+    if (!locked && (stateRef.current === "waiting" || stateRef.current === "target")) {
+      pauseGame();
     }
+  }, [pauseGame]);
 
-    const remaining = targetsRef.current.filter((target) => target.id !== hit.id);
-    if (remaining.length > 0) {
-      targetsRef.current = remaining;
-      setTargets(remaining);
-      return;
-    }
-
-    finishRound(performance.now() - startTimeRef.current);
-  };
-
-  const changeDifficulty = (nextDifficulty: Difficulty) => {
-    difficultyRef.current = nextDifficulty;
-    setDifficulty(nextDifficulty);
-    if (stateRef.current !== "idle") reset();
-  };
-
-  const profileIsValid = profileError === null;
-
+  // Keyboard shortcut listener: ESC to pause/resume, SPACE to start
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showMenu) {
-        resumeGame();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showEscMenu) {
+          resumeGame();
+        } else if (stateRef.current === "waiting" || stateRef.current === "target") {
+          pauseGame();
+        }
         return;
       }
-      if (event.key === "Escape" && (stateRef.current === "waiting" || stateRef.current === "target")) {
-        pauseGame();
-        return;
-      }
-      if (event.code === "Space" && profileIsValid && stateRef.current !== "waiting" && stateRef.current !== "target") {
-        event.preventDefault();
-        startRound();
+
+      if (e.code === "Space" && !showEscMenu && !showAuthModal) {
+        if (stateRef.current !== "waiting" && stateRef.current !== "target") {
+          e.preventDefault();
+          startRound();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pauseGame, profileIsValid, resumeGame, showMenu, startRound]);
+  }, [pauseGame, resumeGame, showAuthModal, showEscMenu, startRound]);
 
-  useEffect(() => () => {
-    clearRevealTimeout();
-    clearAutoReset();
-    stopAnimation();
-  }, [clearAutoReset, clearRevealTimeout, stopAnimation]);
+  const changeDifficulty = (newDiff: Difficulty) => {
+    difficultyRef.current = newDiff;
+    setDifficulty(newDiff);
+    if (stateRef.current !== "idle") resetGame();
+  };
 
   const statusText: Record<GameState, string> = {
-    idle: "Listo para empezar",
-    waiting: "Prepárate",
-    target: "¡DISPARA!",
-    tooSoon: "Disparo prematuro",
-    result: "Ronda completada",
+    idle: "Listo para disparar",
+    waiting: "PREPÁRATE · No dispares todavía",
+    target: "¡DISPARA A LOS OBJETIVOS!",
+    tooSoon: "DISPARO PREMATURO (Fallo)",
+    result: "RONDA COMPLETADA",
   };
 
   return (
-    <div className="reaction-shell">
+    <div ref={shellRef} className={`reaction-shell ${isFullscreen ? "is-fullscreen" : ""}`}>
+      {/* Top Header */}
       <header className="app-header">
         <div className="brand">
-          <div className="brand-mark" aria-hidden="true">+</div>
+          <div className="brand-mark" aria-hidden="true">🎯</div>
           <div>
-            <p className="eyebrow">AIM TRAINING</p>
-            <h1>Reaction Shooter</h1>
+            <p className="eyebrow">TEST DE TIEMPO DE REACCIÓN</p>
+            <h1>Reaction Time Test</h1>
           </div>
         </div>
+
         <div className={`status-badge status-${state}`} aria-live="polite">
           <span className="status-dot" />
-          {statusText[state]}
+          <span className="status-label-text">{statusText[state]}</span>
         </div>
-        <ProfileEditor name={profileName} error={profileError} onChange={onProfileNameChange} />
+
+        {/* Identity & Profile Bar */}
+        <div className="auth-status-bar">
+          {auth.isAuthenticated ? (
+            <div className="user-logged-box">
+              <span className="user-online-dot" />
+              <span className="user-name-text"><b>{auth.username}</b></span>
+              <button
+                type="button"
+                className="header-action-btn"
+                onClick={() => setShowEscMenu(true)}
+                title="Abrir menú y ajustes"
+              >
+                ⚙ Menú (ESC)
+              </button>
+              <button
+                type="button"
+                className="header-logout-btn"
+                onClick={auth.logout}
+                title="Cerrar sesión"
+              >
+                Salir
+              </button>
+            </div>
+          ) : (
+            <div className="user-guest-box">
+              <span className="guest-badge">INVITADO</span>
+              <button
+                type="button"
+                className="auth-enter-btn"
+                onClick={() => setShowAuthModal(true)}
+              >
+                Iniciar Sesión
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="fullscreen-toggle-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            {isFullscreen ? "🗗" : "🗖"}
+          </button>
+        </div>
       </header>
 
-      <main className="dashboard">
-        <section className="game-card">
-          <div className="game-toolbar">
-            <div>
-              <span className="section-label">MODO DE PRUEBA</span>
-              <p className="mode-description">{difficultyConfig[difficulty].description}</p>
-            </div>
+      {/* Main Fullscreen Arena Viewport */}
+      <main className="arena-viewport-container">
+        <div className={`play-area state-${state} ${isPointerLocked ? "is-locked" : ""}`}>
+          {/* 3D Viewport */}
+          <ShooterArena
+            state={state}
+            difficulty={difficulty}
+            settings={settings}
+            isPaused={showEscMenu}
+            onTargetHit={handleTargetHit}
+            onPrematureShot={handlePrematureShot}
+            onPointerLockChange={handlePointerLockChange}
+            onRecoilTriggered={handleRecoilTriggered}
+          />
 
-            <div className="difficulty-switch" role="group" aria-label="Seleccionar dificultad">
-              {DIFFICULTY_LEVELS.map((level) => (
-                <button
-                  key={level}
-                  className={difficulty === level ? "active" : ""}
-                  onClick={() => changeDifficulty(level)}
-                  type="button"
-                  disabled={state === "waiting" || state === "target"}
-                >
-                  {difficultyConfig[level].label}
-                </button>
-              ))}
+          {/* Central Locked Crosshair */}
+          <Crosshair
+            settings={settings}
+            recoil={recoilActive}
+            hitMarker={hitMarkerActive}
+          />
+
+          {/* Floating In-Game HUD Stats */}
+          <aside className="hud-stats-widget" aria-label="Estadísticas de juego">
+            <div className="hud-stat-pill highlight">
+              <span className="hud-stat-label">MEJOR</span>
+              <strong className="hud-stat-value">{bestTime !== null ? `${bestTime} ms` : "—"}</strong>
             </div>
+            <div className="hud-stat-pill">
+              <span className="hud-stat-label">ÚLTIMO</span>
+              <strong className="hud-stat-value">{lastTime !== null ? `${lastTime} ms` : "—"}</strong>
+            </div>
+            <div className="hud-stat-pill">
+              <span className="hud-stat-label">INTENTOS</span>
+              <strong className="hud-stat-value">{attempts}</strong>
+            </div>
+            <div className="hud-stat-pill hide-on-mobile">
+              <span className="hud-stat-label">DIFICULTAD</span>
+              <strong className="hud-stat-value">{difficultyConfig[difficulty].label}</strong>
+            </div>
+          </aside>
+
+          {/* Arena HUD Corner info */}
+          <div className="arena-hud" aria-hidden="true">
+            <span className="hud-corner top-left">TARGET ARENA</span>
+            <span className="hud-corner top-right">SENS {settings.sensitivity.toFixed(1)}x</span>
+            <span className="hud-center-notice">
+              {isPointerLocked ? "Puntero fijado · Presiona ESC para menú" : "Haz clic para apuntar y disparar"}
+            </span>
           </div>
 
-          <div
-            ref={playRef}
-            className={`play-area state-${state}`}
-            onClick={handlePlayAreaClick}
-            role="application"
-            aria-label="Área de prueba de reacción"
-          >
-            <div className="arena-grid" aria-hidden="true" />
+          {/* In-Game Overlay Messages */}
+          {state === "idle" && (
+            <div className="arena-message" onClick={startRound}>
+              <span className="crosshair-large" aria-hidden="true">+</span>
+              <strong>TEST DE TIEMPO DE REACCIÓN</strong>
+              <span>
+                {auth.isAuthenticated
+                  ? "Haz clic aquí o presiona ESPACIO para comenzar."
+                  : "Debes registrarte o iniciar sesión para guardar récords."}
+              </span>
+            </div>
+          )}
 
-            {state === "idle" && (
-              <div className="arena-message">
-                <span className="crosshair-large" aria-hidden="true">+</span>
-                <strong>¿Listo?</strong>
-                <span>Haz clic en iniciar y espera la señal.</span>
-              </div>
-            )}
+          {state === "waiting" && (
+            <div className="arena-message waiting-message">
+              <span className="waiting-line" />
+              <strong>PREPÁRATE</strong>
+              <span>No dispares antes de que aparezca el objetivo</span>
+            </div>
+          )}
 
-            {state === "waiting" && (
-              <div className="arena-message waiting-message">
-                <span className="waiting-line" />
-                <strong>ESPERA</strong>
-                <span>No dispares todavía</span>
-              </div>
-            )}
+          {state === "tooSoon" && (
+            <div className="arena-message error-message">
+              <strong>DISPARO PREMATURO</strong>
+              <span>Fallo de penalización · Reintentando...</span>
+            </div>
+          )}
 
-            {state === "tooSoon" && (
-              <div className="arena-message error-message">
-                <strong>FALLO</strong>
-                <span>Disparo prematuro · nueva ronda en breve</span>
-              </div>
-            )}
+          {state === "result" && lastTime !== null && (
+            <div className="arena-message result-message" onClick={startRound}>
+              <span>TIEMPO DE REACCIÓN</span>
+              <strong>{lastTime}<small> ms</small></strong>
+              <span>Haz clic en <b>Otra ronda</b> o presiona ESPACIO</span>
+            </div>
+          )}
+        </div>
 
-            {state === "result" && lastTime !== null && (
-              <div className="arena-message result-message">
-                <span>TIEMPO DE REACCIÓN</span>
-                <strong>{lastTime}<small> ms</small></strong>
-                <span>Haz clic en <b>Otra ronda</b> para continuar.</span>
-              </div>
-            )}
-
-            {targets.map((target) => (
-              <div
-                key={target.id}
-                className={`target target-${difficulty} ${target.visible ? "is-visible" : "is-hidden"}`}
-                style={{ left: target.x, top: target.y }}
-                aria-hidden="true"
+        {/* Bottom Responsive Controls Bar */}
+        <div className="arena-bottom-bar">
+          <div className="difficulty-switch" role="group" aria-label="Seleccionar dificultad">
+            {DIFFICULTY_LEVELS.map((level) => (
+              <button
+                key={level}
+                className={difficulty === level ? "active" : ""}
+                onClick={() => changeDifficulty(level)}
+                type="button"
+                disabled={state === "waiting" || state === "target"}
               >
-                <div className="target-ring ring-outer" />
-                <div className="target-ring ring-middle" />
-                <div className="target-center" />
-              </div>
+                {difficultyConfig[level].label}
+              </button>
             ))}
-
-            <div className="arena-crosshair" aria-hidden="true">
-              <span />
-            </div>
           </div>
 
-          <div className="game-actions">
-            <button className="primary-action" onClick={startRound} type="button" disabled={!profileIsValid || state === "waiting" || state === "target"}>
-              {state === "result" || state === "tooSoon" ? "Otra ronda" : "Iniciar prueba"}
+          <div className="bottom-actions-group">
+            <button
+              className="primary-action"
+              onClick={startRound}
+              type="button"
+              disabled={state === "waiting" || state === "target"}
+            >
+              {auth.isAuthenticated
+                ? state === "result" || state === "tooSoon"
+                  ? "Otra ronda"
+                  : "Iniciar prueba"
+                : "🔒 Iniciar Sesión para Jugar"}
               <kbd>SPACE</kbd>
             </button>
-            <button className="secondary-action" onClick={pauseGame} type="button" disabled={state !== "waiting" && state !== "target"}>
-              Pausar
+
+            <button
+              className="secondary-action"
+              onClick={pauseGame}
+              type="button"
+              title="Menú, ajustes y Top 100"
+            >
+              ⚙ Menú / Top
               <kbd>ESC</kbd>
             </button>
-            <button className="text-action" onClick={reset} type="button">
-              Reiniciar estadísticas
+
+            <button
+              className="text-action"
+              onClick={resetGame}
+              type="button"
+              title="Reiniciar estadísticas de la sesión actual"
+            >
+              Reiniciar
             </button>
           </div>
-        </section>
-
-        <aside className="stats-panel">
-          <div className="panel-heading">
-            <span className="section-label">ESTADÍSTICAS</span>
-            <span className="round-count">{attempts} {attempts === 1 ? "intento" : "intentos"}</span>
-          </div>
-          <div className="stat-list">
-            <div className="stat-item highlight">
-              <span>Mejor tiempo</span>
-              <strong>{bestTime !== null ? `${bestTime} ms` : "—"}</strong>
-            </div>
-            <div className="stat-item">
-              <span>Último tiempo</span>
-              <strong>{lastTime !== null ? `${lastTime} ms` : "—"}</strong>
-            </div>
-            <div className="stat-item">
-              <span>Dificultad</span>
-              <strong>{difficultyConfig[difficulty].label}</strong>
-            </div>
-          </div>
-          <div className="tips">
-            <span className="section-label">CONTROLES</span>
-            <p><b>Click</b> · Disparar al objetivo</p>
-            <p><b>Space</b> · Iniciar una ronda</p>
-            <p><b>Esc</b> · Pausar la prueba</p>
-          </div>
-        </aside>
+        </div>
       </main>
 
-      <footer className="app-footer">
-        <span>Entrenamiento de reacción</span>
-      </footer>
+      {/* ESC Menu Modal */}
+      <EscMenu
+        isOpen={showEscMenu}
+        onResume={resumeGame}
+        onReset={resetGame}
+        onExit={() => {
+          resetGame();
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }}
+        settings={settings}
+        onSettingsChange={handleSettingsChange}
+        difficulty={difficulty}
+        onDifficultyChange={changeDifficulty}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
+        username={auth.username}
+        onLogout={() => {
+          auth.logout();
+          resetGame();
+        }}
+      />
 
-      {showMenu && (
-        <div className="menu-overlay" role="dialog" aria-modal="true" aria-label="Juego pausado">
-          <div className="menu-box">
-            <span className="section-label">PRUEBA PAUSADA</span>
-            <h2>¿Continuamos?</h2>
-            <p>Tu progreso de la ronda actual se conserva.</p>
-            <div className="menu-buttons">
-              <button className="primary-action" onClick={resumeGame} type="button">Reanudar</button>
-              <button className="secondary-action" onClick={reset} type="button">Salir de la ronda</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Identity Registration / Login Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onLogin={async (u, p) => {
+          const success = await auth.login(u, p);
+          if (success) setShowAuthModal(false);
+          return success;
+        }}
+        onRegister={async (u, p) => {
+          const success = await auth.register(u, p);
+          if (success) setShowAuthModal(false);
+          return success;
+        }}
+        error={auth.error}
+        onClearError={auth.clearError}
+      />
     </div>
   );
 }

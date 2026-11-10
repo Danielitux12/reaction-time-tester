@@ -14,10 +14,16 @@ public class ScoreRepository : IScoreRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyList<Score>> GetTopScoresAsync(int limit, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Score>> GetTopScoresAsync(int limit, int? difficulty = null, CancellationToken cancellationToken = default)
     {
-        return await _db.Scores
-            .AsNoTracking()
+        var query = _db.Scores.AsNoTracking();
+
+        if (difficulty.HasValue)
+        {
+            query = query.Where(s => s.Difficulty == difficulty.Value);
+        }
+
+        return await query
             .OrderBy(s => s.TimeMs)
             .ThenBy(s => s.CreatedAt)
             .Take(limit)

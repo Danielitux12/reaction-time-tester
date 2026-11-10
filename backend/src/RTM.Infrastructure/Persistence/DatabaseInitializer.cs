@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace RTM.Infrastructure.Persistence;
@@ -22,7 +24,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             try
             {
                 _logger.LogInformation("Attempting database initialization (attempt {Attempt}/{MaxAttempts})...", attempt, maxAttempts);
-                await _db.Database.EnsureCreatedAsync(cancellationToken);
+                var created = await _db.Database.EnsureCreatedAsync(cancellationToken);
+                if (!created)
+                {
+                    var databaseCreator = _db.Database.GetService<IRelationalDatabaseCreator>();
+                    if (!await databaseCreator.HasTablesAsync(cancellationToken))
+                    {
+                        await databaseCreator.CreateTablesAsync(cancellationToken);
+                    }
+                }
                 _logger.LogInformation("Database initialized successfully.");
                 return;
             }

@@ -3,9 +3,7 @@ import { useState } from "react";
 import { useLeaderboardController } from "../../controllers/useLeaderboardController";
 import { DIFFICULTY_LEVELS, difficultyConfig, type Difficulty } from "../../config/difficulty";
 
-type DifficultyFilter = "all" | Difficulty;
-
-const TOP_COUNT = 20;
+const TOP_COUNT = 100;
 
 type LeaderboardProps = {
   refreshSignal?: number;
@@ -25,27 +23,21 @@ const formatDate = (iso: string) => {
 };
 
 export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
-  const [filter, setFilter] = useState<DifficultyFilter>("all");
-  const { scores, status, updatedAt, loadScores } = useLeaderboardController(refreshSignal);
+  const [filter, setFilter] = useState<Difficulty>(1);
+  const { scores, status, updatedAt, loadScores } = useLeaderboardController(filter, refreshSignal);
 
-  const filtered = (filter === "all" ? scores : scores.filter((entry) => entry.difficulty === filter)).slice(
-    0,
-    TOP_COUNT,
-  );
+  const filtered = scores.slice(0, TOP_COUNT);
 
   return (
     <section className="leaderboard-panel">
       <div className="leaderboard-heading">
         <div>
           <span className="section-label">RANKING GLOBAL</span>
-          <h2>Top 20 · Mejores tiempos</h2>
+          <h2>Top 100 · Mejores tiempos</h2>
         </div>
 
         <div className="leaderboard-controls">
           <div className="difficulty-switch" role="group" aria-label="Filtrar ranking por dificultad">
-            <button type="button" className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-              Todas
-            </button>
             {DIFFICULTY_LEVELS.map((level) => (
               <button
                 key={level}
@@ -74,12 +66,12 @@ export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
       )}
 
       {status === "loading" && scores.length === 0 && (
-        <div className="leaderboard-message">Cargando ranking...</div>
+        <div className="leaderboard-message">Cargando top 100...</div>
       )}
 
       {status === "ready" && filtered.length === 0 && (
         <div className="leaderboard-message">
-          Aún no hay tiempos registrados{filter !== "all" ? " en esta dificultad" : ""}. ¡Sé el primero!
+          Aún no hay tiempos registrados en dificultad {difficultyConfig[filter].label}. ¡Sé el primero!
         </div>
       )}
 
