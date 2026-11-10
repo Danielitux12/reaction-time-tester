@@ -79,7 +79,7 @@ export function useAuthController() {
       });
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error al iniciar sesión";
+      const message = err instanceof Error ? err.message : "Login failed";
       setAuthState((prev) => ({ ...prev, loading: false, error: message }));
       return false;
     }
@@ -97,7 +97,7 @@ export function useAuthController() {
       });
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error al registrarse";
+      const message = err instanceof Error ? err.message : "Registration failed";
       setAuthState((prev) => ({ ...prev, loading: false, error: message }));
       return false;
     }

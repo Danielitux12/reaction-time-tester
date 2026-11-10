@@ -43,18 +43,18 @@ export default function EscMenu({
   };
 
   return (
-    <div className="esc-menu-overlay" role="dialog" aria-modal="true" aria-label="Menú de Pausa">
+    <div className="esc-menu-overlay" role="dialog" aria-modal="true" aria-label="Pause Menu">
       <div className="esc-menu-container">
         {/* Header */}
         <div className="esc-header">
           <div className="esc-title-group">
-            <span className="esc-badge">SISTEMA PAUSADO</span>
-            <h2>MENÚ DE OPERACIONES</h2>
+            <span className="esc-badge">SYSTEM PAUSED</span>
+            <h2>OPERATIONS MENU</h2>
           </div>
           {username && (
             <div className="esc-user-badge">
               <span className="user-indicator" />
-              <span>Agente: <b>{username}</b></span>
+              <span>Operator: <b>{username}</b></span>
             </div>
           )}
         </div>
@@ -66,14 +66,14 @@ export default function EscMenu({
             className={`esc-tab ${activeTab === "resume" ? "active" : ""}`}
             onClick={() => setActiveTab("resume")}
           >
-            ▶ Reanudar
+            ▶ Resume
           </button>
           <button
             type="button"
             className={`esc-tab ${activeTab === "settings" ? "active" : ""}`}
             onClick={() => setActiveTab("settings")}
           >
-            ⚙ Ajustes
+            ⚙ Settings
           </button>
           <button
             type="button"
@@ -90,30 +90,30 @@ export default function EscMenu({
           {activeTab === "resume" && (
             <div className="esc-pane resume-pane">
               <p className="resume-intro">
-                El entrenamiento está en pausa. Tu ángulo de mira y objetivos en la arena se mantienen congelados.
+                Training is paused. Your crosshair angle and arena targets remain frozen.
               </p>
 
               <div className="resume-actions">
                 <button type="button" className="esc-btn primary-btn" onClick={onResume}>
-                  <span>▶ CONTINUAR PARTIDA</span>
+                  <span>▶ RESUME ROUND</span>
                   <kbd>ESC</kbd>
                 </button>
 
                 <button type="button" className="esc-btn secondary-btn" onClick={onReset}>
-                  <span>↻ Reiniciar Ronda Actual</span>
+                  <span>↻ Restart Current Round</span>
                 </button>
 
                 <button type="button" className="esc-btn danger-btn" onClick={onExit}>
-                  <span>✖ Salir al Vestíbulo</span>
+                  <span>✖ Exit to Lobby</span>
                 </button>
               </div>
 
               <div className="esc-info-box">
-                <h4>CONTROLES RÁPIDOS</h4>
+                <h4>QUICK CONTROLS</h4>
                 <ul>
-                  <li><b>Mover Mouse</b>: Apuntar a los objetivos en la arena.</li>
-                  <li><b>Click Izquierdo</b>: Disparo directo desde el centro.</li>
-                  <li><b>ESC</b>: Alternar este menú de pausa.</li>
+                  <li><b>Move Mouse</b>: Aim at targets in the arena.</li>
+                  <li><b>Left Click</b>: Fire direct shot from crosshair center.</li>
+                  <li><b>ESC</b>: Toggle this pause menu.</li>
                 </ul>
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function EscMenu({
               {/* Sensibilidad */}
               <div className="setting-group">
                 <div className="setting-label-row">
-                  <label htmlFor="sens-slider">Sensibilidad del Mouse</label>
+                  <label htmlFor="sens-slider">Mouse Sensitivity</label>
                   <span className="setting-val">{settings.sensitivity.toFixed(2)}x</span>
                 </div>
                 <input
@@ -137,14 +137,14 @@ export default function EscMenu({
                   value={settings.sensitivity}
                   onChange={(e) => updateSetting("sensitivity", parseFloat(e.target.value))}
                 />
-                <small className="setting-desc">Ajusta la velocidad de puntería y movimiento de cámara.</small>
+                <small className="setting-desc">Adjust aiming speed and camera responsiveness.</small>
               </div>
 
               {/* Invertir Y */}
               <div className="setting-group-inline">
                 <div>
-                  <label htmlFor="invert-y-chk">Invertir Eje Y</label>
-                  <small className="setting-desc">Invierte la dirección vertical al mover el ratón arriba/abajo.</small>
+                  <label htmlFor="invert-y-chk">Invert Y Axis</label>
+                  <small className="setting-desc">Inverts vertical pitch when moving mouse up/down.</small>
                 </div>
                 <input
                   id="invert-y-chk"
@@ -156,7 +156,7 @@ export default function EscMenu({
 
               {/* Estilo de Mira */}
               <div className="setting-group">
-                <label>Estilo de la Mira (Punta Central)</label>
+                <label>Crosshair Style</label>
                 <div className="options-row">
                   {(["cross", "dot", "circle"] as const).map((style) => (
                     <button
@@ -165,7 +165,7 @@ export default function EscMenu({
                       className={`option-btn ${settings.crosshairStyle === style ? "active" : ""}`}
                       onClick={() => updateSetting("crosshairStyle", style)}
                     >
-                      {style === "cross" ? "+ Cruz Táctica" : style === "dot" ? "• Punto de Precisión" : "◎ Círculo y Punto"}
+                      {style === "cross" ? "+ Tactical Cross" : style === "dot" ? "• Precision Dot" : "◎ Circle & Dot"}
                     </button>
                   ))}
                 </div>
@@ -173,15 +173,15 @@ export default function EscMenu({
 
               {/* Color de Mira */}
               <div className="setting-group">
-                <label>Color de la Mira</label>
+                <label>Crosshair Color</label>
                 <div className="colors-row">
                   {[
-                    { label: "Verde Táctico", color: "#00ff66" },
-                    { label: "Verde Esmeralda", color: "#10b981" },
-                    { label: "Amarillo Eléctrico", color: "#ffe600" },
-                    { label: "Rojo Escarlata", color: "#ff2a5f" },
-                    { label: "Blanco Puro", color: "#ffffff" },
-                    { label: "Cian Neón", color: "#00f0ff" },
+                    { label: "Tactical Green", color: "#00ff66" },
+                    { label: "Emerald Green", color: "#10b981" },
+                    { label: "Electric Yellow", color: "#ffe600" },
+                    { label: "Scarlet Red", color: "#ff2a5f" },
+                    { label: "Pure White", color: "#ffffff" },
+                    { label: "Neon Cyan", color: "#00f0ff" },
                   ].map(({ label, color }) => (
                     <button
                       key={color}
@@ -198,8 +198,8 @@ export default function EscMenu({
               {/* Sonido */}
               <div className="setting-group">
                 <div className="setting-label-row">
-                  <label htmlFor="sound-vol">Volumen de Efectos</label>
-                  <span className="setting-val">{settings.soundEnabled ? `${Math.round(settings.volume * 100)}%` : "Silenciado"}</span>
+                  <label htmlFor="sound-vol">Sound Effects Volume</label>
+                  <span className="setting-val">{settings.soundEnabled ? `${Math.round(settings.volume * 100)}%` : "Muted"}</span>
                 </div>
                 <div className="slider-with-toggle">
                   <input
@@ -224,7 +224,7 @@ export default function EscMenu({
 
               {/* Dificultad */}
               <div className="setting-group">
-                <label>Dificultad de la Prueba</label>
+                <label>Test Difficulty</label>
                 <div className="options-row">
                   {DIFFICULTY_LEVELS.map((level) => (
                     <button
@@ -243,11 +243,11 @@ export default function EscMenu({
               {/* Pantalla Completa */}
               <div className="setting-group-inline">
                 <div>
-                  <label>Pantalla Completa</label>
-                  <small className="setting-desc">Maximiza la inmersión visual y fija el puntero al centro.</small>
+                  <label>Full Screen</label>
+                  <small className="setting-desc">Maximize immersion and lock mouse cursor to center.</small>
                 </div>
                 <button type="button" className="esc-btn-small" onClick={onToggleFullscreen}>
-                  {isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}
+                  {isFullscreen ? "Exit Full Screen" : "Full Screen"}
                 </button>
               </div>
             </div>
@@ -264,11 +264,11 @@ export default function EscMenu({
         {/* Footer */}
         <div className="esc-footer">
           <button type="button" className="esc-btn-link" onClick={onResume}>
-            Reanudar (ESC)
+            Resume (ESC)
           </button>
           {username && (
             <button type="button" className="esc-btn-link text-danger" onClick={onLogout}>
-              Cerrar Sesión ({username})
+              Sign Out ({username})
             </button>
           )}
         </div>

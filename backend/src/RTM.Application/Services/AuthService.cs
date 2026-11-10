@@ -28,7 +28,7 @@ public class AuthService : IAuthService
         var existingUser = await _userManager.FindByNameAsync(trimmedUsername);
         if (existingUser != null)
         {
-            throw new InvalidOperationException($"El nombre de usuario '{trimmedUsername}' ya está en uso.");
+            throw new InvalidOperationException($"Username '{trimmedUsername}' is already taken.");
         }
 
         var user = new ApplicationUser
@@ -41,7 +41,7 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
         {
             var errors = string.Join(" ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Error al crear usuario: {errors}");
+            throw new InvalidOperationException($"Error creating user: {errors}");
         }
 
         return GenerateAuthResponse(user);
@@ -54,13 +54,13 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByNameAsync(trimmedUsername);
         if (user == null)
         {
-            throw new UnauthorizedAccessException("Credenciales incorrectas: usuario no encontrado.");
+            throw new UnauthorizedAccessException("Invalid credentials: user not found.");
         }
 
         var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
         if (!isPasswordValid)
         {
-            throw new UnauthorizedAccessException("Credenciales incorrectas: contraseña incorrecta.");
+            throw new UnauthorizedAccessException("Invalid credentials: incorrect password.");
         }
 
         return GenerateAuthResponse(user);

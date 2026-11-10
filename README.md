@@ -137,9 +137,13 @@ VITE_API_URL=http://localhost:5000
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/scores?limit=10` | Top reaction times (ordered by lowest `timeMs`) |
+| `POST` | `/api/auth/register` | Register a new user account |
+| `POST` | `/api/auth/login` | Authenticate and obtain JWT token / cookies |
+| `POST` | `/api/auth/logout` | Clear authentication session cookies |
+| `GET` | `/api/auth/me` | Current authenticated user profile |
+| `GET` | `/api/scores?limit=100&difficulty=1` | Top reaction times (1-100, optional difficulty filter) |
 | `GET` | `/api/scores/{id}` | Get score details by identifier |
-| `POST` | `/api/scores` | Record a new score |
+| `POST` | `/api/scores` | Record a new score (Authorized) |
 | `GET` | `/health` | Service health check |
 
 ### Sample POST Request Payload:

@@ -11,9 +11,9 @@ type LeaderboardProps = {
 
 const formatDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleString("es-ES", {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short",
       day: "2-digit",
-      month: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -32,12 +32,12 @@ export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
     <section className="leaderboard-panel">
       <div className="leaderboard-heading">
         <div>
-          <span className="section-label">RANKING GLOBAL</span>
-          <h2>Top 100 · Mejores tiempos</h2>
+          <span className="section-label">GLOBAL LEADERBOARD</span>
+          <h2>Top 100 · Best Times</h2>
         </div>
 
         <div className="leaderboard-controls">
-          <div className="difficulty-switch" role="group" aria-label="Filtrar ranking por dificultad">
+          <div className="difficulty-switch" role="group" aria-label="Filter leaderboard by difficulty">
             {DIFFICULTY_LEVELS.map((level) => (
               <button
                 key={level}
@@ -51,27 +51,27 @@ export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
           </div>
 
           <button className="text-action" type="button" onClick={() => void loadScores()} disabled={status === "loading"}>
-            {status === "loading" ? "Actualizando..." : "Actualizar"}
+            {status === "loading" ? "Updating..." : "Refresh"}
           </button>
         </div>
       </div>
 
       {status === "error" && (
         <div className="leaderboard-message leaderboard-error">
-          <span>No se pudo cargar el ranking. ¿Está el backend corriendo?</span>
+          <span>Unable to load leaderboard. Is the backend service running?</span>
           <button className="text-action" type="button" onClick={() => void loadScores()}>
-            Reintentar
+            Retry
           </button>
         </div>
       )}
 
       {status === "loading" && scores.length === 0 && (
-        <div className="leaderboard-message">Cargando top 100...</div>
+        <div className="leaderboard-message">Loading top 100...</div>
       )}
 
       {status === "ready" && filtered.length === 0 && (
         <div className="leaderboard-message">
-          Aún no hay tiempos registrados en dificultad {difficultyConfig[filter].label}. ¡Sé el primero!
+          No records registered yet in {difficultyConfig[filter].label} difficulty. Be the first!
         </div>
       )}
 
@@ -79,10 +79,10 @@ export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
         <ol className="leaderboard-list">
           <li className="leaderboard-row leaderboard-row-head" aria-hidden="true">
             <span>#</span>
-            <span>Jugador</span>
-            <span>Dificultad</span>
-            <span>Fecha</span>
-            <span>Tiempo</span>
+            <span>Player</span>
+            <span>Difficulty</span>
+            <span>Date</span>
+            <span>Time</span>
           </li>
           {filtered.map((entry, index) => (
             <li key={entry.id} className={`leaderboard-row${index < 3 ? ` top-${index + 1}` : ""}`}>
@@ -101,7 +101,7 @@ export default function Leaderboard({ refreshSignal }: LeaderboardProps) {
         </ol>
       )}
 
-      {updatedAt && <p className="leaderboard-updated">Actualizado {updatedAt.toLocaleTimeString("es-ES")}</p>}
+      {updatedAt && <p className="leaderboard-updated">Updated at {updatedAt.toLocaleTimeString("en-US")}</p>}
     </section>
   );
 }

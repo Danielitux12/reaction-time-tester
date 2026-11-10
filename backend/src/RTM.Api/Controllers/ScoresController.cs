@@ -24,7 +24,7 @@ public class ScoresController : ControllerBase
     /// Public endpoint allowed for unauthenticated visitors.
     /// </summary>
     /// <param name="limit">Maximum number of scores to return (1-100, default 100).</param>
-    /// <param name="difficulty">Optional difficulty filter (1 = Facil, 2 = Medio, 3 = Dificil).</param>
+    /// <param name="difficulty">Optional difficulty filter (1 = Easy, 2 = Medium, 3 = Hard).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet]
     [AllowAnonymous]

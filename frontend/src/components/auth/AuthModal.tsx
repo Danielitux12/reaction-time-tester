@@ -29,23 +29,23 @@ export default function AuthModal({
   const validateForm = (): boolean => {
     const trimmedUser = username.trim();
     if (!trimmedUser) {
-      setValidationError("El nombre de usuario es obligatorio.");
+      setValidationError("Username is required.");
       return false;
     }
     if (trimmedUser.length < 3 || trimmedUser.length > 30) {
-      setValidationError("El usuario debe tener entre 3 y 30 caracteres.");
+      setValidationError("Username must be between 3 and 30 characters.");
       return false;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUser)) {
-      setValidationError("Solo se permiten letras, números y guión bajo (_).");
+      setValidationError("Only letters, numbers, and underscores (_) are allowed.");
       return false;
     }
     if (!password) {
-      setValidationError("La contraseña es obligatoria.");
+      setValidationError("Password is required.");
       return false;
     }
     if (password.length < 6) {
-      setValidationError("La contraseña debe tener al menos 6 caracteres.");
+      setValidationError("Password must be at least 6 characters.");
       return false;
     }
 
@@ -79,7 +79,7 @@ export default function AuthModal({
     <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div className="auth-card">
         {onClose && (
-          <button className="auth-close-btn" onClick={onClose} aria-label="Cerrar modal">
+          <button className="auth-close-btn" onClick={onClose} aria-label="Close modal">
             &times;
           </button>
         )}
@@ -87,12 +87,12 @@ export default function AuthModal({
         <div className="auth-header">
           <div className="auth-badge">IDENTITY ACCESS</div>
           <h2 id="auth-modal-title">
-            {tab === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
+            {tab === "login" ? "Sign In" : "Create Account"}
           </h2>
           <p className="auth-subtitle">
             {tab === "login"
-              ? "Ingresa tus credenciales para competir y guardar tus mejores marcas."
-              : "Registra tu usuario único para registrar tus récords en el test de reacción."}
+              ? "Enter your credentials to compete and save your best records."
+              : "Register your unique username to record your reaction test times."}
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export default function AuthModal({
             className={`auth-tab ${tab === "login" ? "active" : ""}`}
             onClick={() => handleTabChange("login")}
           >
-            Ingresar
+            Sign In
           </button>
           <button
             type="button"
@@ -113,7 +113,7 @@ export default function AuthModal({
             className={`auth-tab ${tab === "register" ? "active" : ""}`}
             onClick={() => handleTabChange("register")}
           >
-            Registro
+            Register
           </button>
         </div>
 
@@ -127,13 +127,13 @@ export default function AuthModal({
 
           <div className="auth-field">
             <label htmlFor="auth-username">
-              Usuario único <span className="req">*</span>
+              Username <span className="req">*</span>
             </label>
             <input
               id="auth-username"
               type="text"
               autoComplete="username"
-              placeholder="Ej. CyberSniper_01"
+              placeholder="e.g. CyberSniper_01"
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value);
@@ -145,12 +145,12 @@ export default function AuthModal({
               maxLength={30}
               disabled={submitting}
             />
-            <small className="field-hint">Mínimo 3 caracteres. Letras, números y _</small>
+            <small className="field-hint">Minimum 3 characters. Letters, numbers, and _</small>
           </div>
 
           <div className="auth-field">
             <label htmlFor="auth-password">
-              Contraseña <span className="req">*</span>
+              Password <span className="req">*</span>
             </label>
             <input
               id="auth-password"
@@ -167,7 +167,7 @@ export default function AuthModal({
               minLength={6}
               disabled={submitting}
             />
-            <small className="field-hint">Mínimo 6 caracteres</small>
+            <small className="field-hint">Minimum 6 characters</small>
           </div>
 
           <button
@@ -176,15 +176,15 @@ export default function AuthModal({
             disabled={submitting}
           >
             {submitting
-              ? "Procesando..."
+              ? "Processing..."
               : tab === "login"
-              ? "Acceder a la Arena"
-              : "Completar Registro"}
+              ? "Enter Arena"
+              : "Complete Registration"}
           </button>
         </form>
 
         <div className="auth-footer-note">
-          <span>Solo usuarios registrados pueden disparar y registrar tiempos. Los visitantes solo pueden consultar el Top Ranking.</span>
+          <span>Only registered users can shoot and record times. Guests can browse the Top Leaderboard.</span>
         </div>
       </div>
     </div>

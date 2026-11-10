@@ -47,7 +47,7 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error durante el registro: " + ex.Message });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error during registration: " + ex.Message });
         }
     }
 
@@ -80,7 +80,7 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error durante el inicio de sesión: " + ex.Message });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error during login: " + ex.Message });
         }
     }
 
@@ -94,7 +94,7 @@ public class AuthController : ControllerBase
     {
         Response.Cookies.Delete("rtm_auth_token");
         Response.Cookies.Delete("rtm_auth_username");
-        return Ok(new { message = "Sesión cerrada correctamente." });
+        return Ok(new { message = "Session closed successfully." });
     }
 
     private void AppendAuthCookies(AuthResponse auth)

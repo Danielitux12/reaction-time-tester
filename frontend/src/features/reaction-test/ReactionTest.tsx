@@ -282,11 +282,11 @@ export default function ReactionTest() {
   };
 
   const statusText: Record<GameState, string> = {
-    idle: "Listo para disparar",
-    waiting: "PREPÁRATE · No dispares todavía",
-    target: "¡DISPARA A LOS OBJETIVOS!",
-    tooSoon: "DISPARO PREMATURO (Fallo)",
-    result: "RONDA COMPLETADA",
+    idle: "Ready to shoot",
+    waiting: "GET READY · Do not shoot yet",
+    target: "SHOOT THE TARGETS!",
+    tooSoon: "TOO EARLY (Fault)",
+    result: "ROUND COMPLETED",
   };
 
   return (
@@ -296,7 +296,7 @@ export default function ReactionTest() {
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">🎯</div>
           <div>
-            <p className="eyebrow">TEST DE TIEMPO DE REACCIÓN</p>
+            <p className="eyebrow">TACTICAL CHALLENGE</p>
             <h1>Reaction Time Test</h1>
           </div>
         </div>
@@ -316,28 +316,28 @@ export default function ReactionTest() {
                 type="button"
                 className="header-action-btn"
                 onClick={() => setShowEscMenu(true)}
-                title="Abrir menú y ajustes"
+                title="Open menu and settings"
               >
-                ⚙ Menú (ESC)
+                ⚙ Menu (ESC)
               </button>
               <button
                 type="button"
                 className="header-logout-btn"
                 onClick={auth.logout}
-                title="Cerrar sesión"
+                title="Sign out"
               >
-                Salir
+                Sign out
               </button>
             </div>
           ) : (
             <div className="user-guest-box">
-              <span className="guest-badge">INVITADO</span>
+              <span className="guest-badge">GUEST</span>
               <button
                 type="button"
                 className="auth-enter-btn"
                 onClick={() => setShowAuthModal(true)}
               >
-                Iniciar Sesión
+                Sign In
               </button>
             </div>
           )}
@@ -346,7 +346,7 @@ export default function ReactionTest() {
             type="button"
             className="fullscreen-toggle-btn"
             onClick={toggleFullscreen}
-            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+            title={isFullscreen ? "Exit full screen" : "Full screen"}
           >
             {isFullscreen ? "🗗" : "🗖"}
           </button>
@@ -376,21 +376,21 @@ export default function ReactionTest() {
           />
 
           {/* Floating In-Game HUD Stats */}
-          <aside className="hud-stats-widget" aria-label="Estadísticas de juego">
+          <aside className="hud-stats-widget" aria-label="Game statistics">
             <div className="hud-stat-pill highlight">
-              <span className="hud-stat-label">MEJOR</span>
+              <span className="hud-stat-label">BEST</span>
               <strong className="hud-stat-value">{bestTime !== null ? `${bestTime} ms` : "—"}</strong>
             </div>
             <div className="hud-stat-pill">
-              <span className="hud-stat-label">ÚLTIMO</span>
+              <span className="hud-stat-label">LAST</span>
               <strong className="hud-stat-value">{lastTime !== null ? `${lastTime} ms` : "—"}</strong>
             </div>
             <div className="hud-stat-pill">
-              <span className="hud-stat-label">INTENTOS</span>
+              <span className="hud-stat-label">ATTEMPTS</span>
               <strong className="hud-stat-value">{attempts}</strong>
             </div>
             <div className="hud-stat-pill hide-on-mobile">
-              <span className="hud-stat-label">DIFICULTAD</span>
+              <span className="hud-stat-label">DIFFICULTY</span>
               <strong className="hud-stat-value">{difficultyConfig[difficulty].label}</strong>
             </div>
           </aside>
@@ -400,7 +400,7 @@ export default function ReactionTest() {
             <span className="hud-corner top-left">TARGET ARENA</span>
             <span className="hud-corner top-right">SENS {settings.sensitivity.toFixed(1)}x</span>
             <span className="hud-center-notice">
-              {isPointerLocked ? "Puntero fijado · Presiona ESC para menú" : "Haz clic para apuntar y disparar"}
+              {isPointerLocked ? "Pointer locked · Press ESC for menu" : "Click to aim and shoot"}
             </span>
           </div>
 
@@ -408,11 +408,11 @@ export default function ReactionTest() {
           {state === "idle" && (
             <div className="arena-message" onClick={startRound}>
               <span className="crosshair-large" aria-hidden="true">+</span>
-              <strong>TEST DE TIEMPO DE REACCIÓN</strong>
+              <strong>REACTION TIME TEST</strong>
               <span>
                 {auth.isAuthenticated
-                  ? "Haz clic aquí o presiona ESPACIO para comenzar."
-                  : "Debes registrarte o iniciar sesión para guardar récords."}
+                  ? "Click here or press SPACE to start."
+                  : "Sign up or log in to save your records."}
               </span>
             </div>
           )}
@@ -420,30 +420,30 @@ export default function ReactionTest() {
           {state === "waiting" && (
             <div className="arena-message waiting-message">
               <span className="waiting-line" />
-              <strong>PREPÁRATE</strong>
-              <span>No dispares antes de que aparezca el objetivo</span>
+              <strong>GET READY</strong>
+              <span>Do not shoot before the target appears</span>
             </div>
           )}
 
           {state === "tooSoon" && (
             <div className="arena-message error-message">
-              <strong>DISPARO PREMATURO</strong>
-              <span>Fallo de penalización · Reintentando...</span>
+              <strong>TOO EARLY</strong>
+              <span>Penalty fault · Retrying...</span>
             </div>
           )}
 
           {state === "result" && lastTime !== null && (
             <div className="arena-message result-message" onClick={startRound}>
-              <span>TIEMPO DE REACCIÓN</span>
+              <span>REACTION TIME</span>
               <strong>{lastTime}<small> ms</small></strong>
-              <span>Haz clic en <b>Otra ronda</b> o presiona ESPACIO</span>
+              <span>Click <b>Next round</b> or press SPACE</span>
             </div>
           )}
         </div>
 
         {/* Bottom Responsive Controls Bar */}
         <div className="arena-bottom-bar">
-          <div className="difficulty-switch" role="group" aria-label="Seleccionar dificultad">
+          <div className="difficulty-switch" role="group" aria-label="Select difficulty">
             {DIFFICULTY_LEVELS.map((level) => (
               <button
                 key={level}
@@ -466,9 +466,9 @@ export default function ReactionTest() {
             >
               {auth.isAuthenticated
                 ? state === "result" || state === "tooSoon"
-                  ? "Otra ronda"
-                  : "Iniciar prueba"
-                : "🔒 Iniciar Sesión para Jugar"}
+                  ? "Next round"
+                  : "Start test"
+                : "🔒 Sign In to Play"}
               <kbd>SPACE</kbd>
             </button>
 
@@ -476,9 +476,9 @@ export default function ReactionTest() {
               className="secondary-action"
               onClick={pauseGame}
               type="button"
-              title="Menú, ajustes y Top 100"
+              title="Menu, settings and Top 100"
             >
-              ⚙ Menú / Top
+              ⚙ Menu / Top
               <kbd>ESC</kbd>
             </button>
 
@@ -486,9 +486,9 @@ export default function ReactionTest() {
               className="text-action"
               onClick={resetGame}
               type="button"
-              title="Reiniciar estadísticas de la sesión actual"
+              title="Reset current session statistics"
             >
-              Reiniciar
+              Reset
             </button>
           </div>
         </div>
