@@ -14,8 +14,19 @@ Reaction-time trainer for FPS players, built with React + TypeScript on the fron
 ```text
 ShooterProject/
 ├── frontend/     # React application
-├── backend/      # ASP.NET Core API
+├── backend/      # ASP.NET Core 8 Clean Architecture (Domain, Application, Infrastructure, Api, Web)
 └── docker-compose.yml
+```
+
+### Backend architecture (Clean Architecture)
+
+```text
+backend/
+├── Domain/           # Enterprise domain entities and repository interfaces
+├── Application/      # Business use cases, DTOs, and application services
+├── Infrastructure/   # PostgreSQL EF Core DbContext, entity configurations, repositories
+├── Api/              # REST API controllers and HTTP presentation
+└── Web/              # ASP.NET Core Web Host, Program.cs, middleware, Swagger & health checks
 ```
 
 ### Frontend architecture

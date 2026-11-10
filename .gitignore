@@ -11,8 +11,11 @@ frontend/.env
 # .NET / backend
 backend/bin/
 backend/obj/
+**/bin/
+**/obj/
 backend/.vs/
 backend/.idea/
+.idea/
 backend/*.user
 backend/*.suo
 backend/*.userosscache
